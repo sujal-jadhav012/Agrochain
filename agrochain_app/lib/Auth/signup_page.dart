@@ -4,9 +4,9 @@ const kPrimaryGreen = Color(0xFF2E7D32);
 const kBackgroundColor = Color(0xFFF5F5F5);
 
 class AgroSignupScreen extends StatefulWidget {
-  final String role;
+  final String? role; // ✅ made optional so it can read from route arguments too
 
-  const AgroSignupScreen({super.key, this.role = 'farmer'});
+  const AgroSignupScreen({super.key, this.role});
 
   @override
   State<AgroSignupScreen> createState() => _AgroSignupScreenState();
@@ -37,20 +37,26 @@ class _AgroSignupScreenState extends State<AgroSignupScreen> {
     super.dispose();
   }
 
-  void _handleSignup() {
+  void _handleSignup(String role) {
     if (_formKey.currentState!.validate()) {
       final data = _controllers.map((key, value) => MapEntry(key, value.text));
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Signup successful!')),
       );
 
-      // ✅ Navigate to dashboard after signup
-      Navigator.pushReplacementNamed(context, '/farmerDashboard');
+      // ✅ Navigate to dashboard depending on role
+      if (role.toLowerCase() == 'farmer') {
+        Navigator.pushReplacementNamed(context, '/farmerDashboard');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Dashboard for $role not implemented yet')),
+        );
+      }
     }
   }
 
-  List<Widget> _buildRoleSpecificFields() {
-    switch (widget.role.toLowerCase()) {
+  List<Widget> _buildRoleSpecificFields(String role) {
+    switch (role.toLowerCase()) {
       case 'farmer':
         return [
           _buildField('village', 'Village'),
@@ -100,6 +106,10 @@ class _AgroSignupScreenState extends State<AgroSignupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ Get role from navigation argument (fallback to widget.role or 'User')
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final String role = args?['role'] ?? widget.role ?? 'User';
+
     return Scaffold(
       backgroundColor: kBackgroundColor,
       appBar: AppBar(
@@ -110,7 +120,7 @@ class _AgroSignupScreenState extends State<AgroSignupScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Signup as ${widget.role[0].toUpperCase()}${widget.role.substring(1)}',
+          'Signup as ${role[0].toUpperCase()}${role.substring(1)}',
           style: const TextStyle(color: Colors.black87),
         ),
         centerTitle: true,
@@ -130,10 +140,10 @@ class _AgroSignupScreenState extends State<AgroSignupScreen> {
                   _buildField('mobile', 'Mobile Number', inputType: TextInputType.phone),
                   _buildField('email', 'Email', inputType: TextInputType.emailAddress),
                   _buildField('password', 'Password', obscure: true),
-                  ..._buildRoleSpecificFields(),
+                  ..._buildRoleSpecificFields(role),
                   const SizedBox(height: 20),
                   ElevatedButton(
-                    onPressed: _handleSignup,
+                    onPressed: () => _handleSignup(role),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: kPrimaryGreen,
                       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 40),
@@ -148,7 +158,11 @@ class _AgroSignupScreenState extends State<AgroSignupScreen> {
                   ),
                   const SizedBox(height: 12),
                   TextButton(
-                    onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
+                    onPressed: () => Navigator.pushReplacementNamed(
+                      context,
+                      '/login',
+                      arguments: role, // ✅ passes back the same role
+                    ),
                     child: const Text(
                       "Already have an account? Login",
                       style: TextStyle(color: kPrimaryGreen),

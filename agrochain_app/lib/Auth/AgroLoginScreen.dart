@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 
-// Define your color constants (you can adjust them later)
+// Define your color constants
 const kBackgroundColor = Color(0xFFF5F5F5);
 const kPrimaryGreen = Color(0xFF2E7D32);
 
 class AgroLoginScreen extends StatelessWidget {
-  const AgroLoginScreen({super.key});
+  final String? role; // ✅ Optional role parameter added
+
+  const AgroLoginScreen({super.key, this.role});
 
   @override
   Widget build(BuildContext context) {
-    final String role =
-        ModalRoute.of(context)?.settings.arguments as String? ?? 'User';
+    // ✅ Prefer constructor role, fallback to route arguments, else default to 'User'
+    final String effectiveRole =
+        role ?? ModalRoute.of(context)?.settings.arguments as String? ?? 'User';
 
     final screenHeight = MediaQuery.of(context).size.height;
 
@@ -38,7 +41,7 @@ class AgroLoginScreen extends StatelessWidget {
               const SizedBox(height: 10),
 
               Text(
-                '$role Login',
+                '$effectiveRole Login',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 26,
@@ -55,7 +58,7 @@ class AgroLoginScreen extends StatelessWidget {
               const SizedBox(height: 40),
 
               _AgroTextField(
-                label: '$role ID or Email',
+                label: '$effectiveRole ID or Email',
                 icon: Icons.person_outline,
                 keyboardType: TextInputType.emailAddress,
               ),
@@ -83,16 +86,16 @@ class AgroLoginScreen extends StatelessWidget {
                 height: 50,
                 child: ElevatedButton(
                   onPressed: () {
-                    print('Logging in as $role...');
+                    print('Logging in as $effectiveRole...');
 
                     // ✅ Navigation logic
-                    if (role == 'Farmer') {
+                    if (effectiveRole == 'Farmer') {
                       Navigator.pushNamed(context, '/farmerDashboard');
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
-                            'Login for $role not implemented yet',
+                            'Login for $effectiveRole not implemented yet',
                           ),
                         ),
                       );
@@ -105,7 +108,7 @@ class AgroLoginScreen extends StatelessWidget {
                     ),
                   ),
                   child: Text(
-                    'LOGIN AS $role',
+                    'LOGIN AS $effectiveRole',
                     style: const TextStyle(
                       fontSize: 18,
                       color: Colors.white,
@@ -130,7 +133,7 @@ class AgroLoginScreen extends StatelessWidget {
                         Navigator.pushNamed(
                           context,
                           '/signup',
-                          arguments: {'role': role}, // 👈 pass current role
+                          arguments: {'role': effectiveRole}, // 👈 pass current role
                         );
                       },
                       child: const Text(
