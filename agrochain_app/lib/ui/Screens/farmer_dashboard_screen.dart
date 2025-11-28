@@ -122,7 +122,9 @@ class _FarmerDashboardScreenState extends State<FarmerDashboardScreen> {
                       onPressed: () {
                         if (cropNameController.text.isEmpty ||
                             weightController.text.isEmpty ||
-                            priceController.text.isEmpty) return;
+                            priceController.text.isEmpty) {
+                          return;
+                        }
 
                         setState(() {
                           final weight = double.parse(weightController.text);
