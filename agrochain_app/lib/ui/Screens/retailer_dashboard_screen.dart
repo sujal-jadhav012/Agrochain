@@ -12,45 +12,51 @@ class RetailerDashboardScreen extends StatefulWidget {
 class _RetailerDashboardScreenState extends State<RetailerDashboardScreen> {
   bool isBlockchainConnected = false;
 
+  // Use weight (kg) and pricePerKg (₹) for each purchase
   final List<Map<String, dynamic>> purchases = [
-    {"product": "Fertilizer", "quantity": 50, "price": 5000},
-    {"product": "Seeds", "quantity": 30, "price": 3000},
-    {"product": "Pesticides", "quantity": 20, "price": 2000},
+    {"product": "Fertilizer", "weight": 50.0, "pricePerKg": 100.0},
+    {"product": "Seeds", "weight": 30.0, "pricePerKg": 100.0},
+    {"product": "Pesticides", "weight": 20.0, "pricePerKg": 100.0},
   ];
 
-  // ✅ Controllers for adding purchase
+  // Controllers for adding purchase
   final TextEditingController _productController = TextEditingController();
-  final TextEditingController _quantityController = TextEditingController();
-  final TextEditingController _priceController = TextEditingController();
+  final TextEditingController _weightController = TextEditingController();
+  final TextEditingController _pricePerKgController = TextEditingController();
 
-  // ✅ Compute dynamic pie chart data based on purchases
+  // Build dynamic pie data: revenue per product (weight * pricePerKg)
   List<PieChartSectionData> get _dynamicPieData {
     if (purchases.isEmpty) return [];
 
-    // Aggregate total price per product type
-    Map<String, double> totals = {};
+    // Aggregate revenue per product
+    final Map<String, double> revenueTotals = {};
     for (var item in purchases) {
-      String product = item['product'];
-      double price = (item['price'] as num).toDouble();
-      totals[product] = (totals[product] ?? 0) + price;
+      final product = item['product'] as String;
+      final weight = (item['weight'] as num).toDouble();
+      final pricePerKg = (item['pricePerKg'] as num).toDouble();
+      final revenue = weight * pricePerKg;
+      revenueTotals[product] = (revenueTotals[product] ?? 0) + revenue;
     }
 
-    double total = totals.values.fold(0, (sum, v) => sum + v);
-    final List<Color> colors = [
+    final double totalRevenue =
+        revenueTotals.values.fold(0.0, (s, v) => s + v).toDouble();
+    final colors = [
       Colors.greenAccent,
       Colors.teal,
       Colors.lightGreen,
       Colors.orangeAccent,
-      Colors.blueAccent
+      Colors.blueAccent,
+      Colors.purpleAccent,
     ];
 
     int i = 0;
-    return totals.entries.map((entry) {
-      final percent = (entry.value / total * 100).toStringAsFixed(1);
-      return PieChartSectionData(
-        value: entry.value,
-        title: '${entry.key}\n$percent%',
-        color: colors[i++ % colors.length],
+    return revenueTotals.entries.map((e) {
+      final percent =
+          totalRevenue > 0 ? (e.value / totalRevenue * 100).toStringAsFixed(1) : '0';
+      final section = PieChartSectionData(
+        value: e.value,
+        title: '${e.key}\n$percent%',
+        color: colors[i % colors.length],
         radius: 60,
         titleStyle: const TextStyle(
           color: Colors.black87,
@@ -58,17 +64,30 @@ class _RetailerDashboardScreenState extends State<RetailerDashboardScreen> {
           fontWeight: FontWeight.w600,
         ),
       );
+      i++;
+      return section;
     }).toList();
   }
 
+  // Add purchase: takes product, weight (kg), price per kg (₹)
   void _addPurchase() {
-    final String product = _productController.text.trim();
-    final String qty = _quantityController.text.trim();
-    final String price = _priceController.text.trim();
+    final product = _productController.text.trim();
+    final weightText = _weightController.text.trim();
+    final priceText = _pricePerKgController.text.trim();
 
-    if (product.isEmpty || qty.isEmpty || price.isEmpty) {
+    if (product.isEmpty || weightText.isEmpty || priceText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('⚠️ Please fill all fields')),
+      );
+      return;
+    }
+
+    final weight = double.tryParse(weightText);
+    final pricePerKg = double.tryParse(priceText);
+
+    if (weight == null || pricePerKg == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('⚠️ Enter valid numbers for weight and price')),
       );
       return;
     }
@@ -76,13 +95,13 @@ class _RetailerDashboardScreenState extends State<RetailerDashboardScreen> {
     setState(() {
       purchases.add({
         "product": product,
-        "quantity": int.tryParse(qty) ?? 0,
-        "price": int.tryParse(price) ?? 0,
+        "weight": weight,
+        "pricePerKg": pricePerKg,
       });
 
       _productController.clear();
-      _quantityController.clear();
-      _priceController.clear();
+      _weightController.clear();
+      _pricePerKgController.clear();
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -90,8 +109,25 @@ class _RetailerDashboardScreenState extends State<RetailerDashboardScreen> {
     );
   }
 
-  int _calculateTotalSales() {
-    return purchases.fold(0, (sum, item) => sum + (item['price'] as int));
+  double _calculateTotalSales() {
+    return purchases.fold(0.0, (sum, item) {
+      final weight = (item['weight'] as num).toDouble();
+      final price = (item['pricePerKg'] as num).toDouble();
+      return sum + (weight * price);
+    }).toDouble();
+  }
+
+  double _calculateTotalWeight() {
+    return purchases.fold(0.0, (sum, item) => sum + (item['weight'] as num).toDouble())
+        .toDouble();
+  }
+
+  @override
+  void dispose() {
+    _productController.dispose();
+    _weightController.dispose();
+    _pricePerKgController.dispose();
+    super.dispose();
   }
 
   @override
@@ -116,7 +152,7 @@ class _RetailerDashboardScreenState extends State<RetailerDashboardScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // Blockchain connection
+            // Blockchain connection toggle (mock)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -156,21 +192,21 @@ class _RetailerDashboardScreenState extends State<RetailerDashboardScreen> {
             ),
             const SizedBox(height: 20),
 
-            // Summary Cards
+            // Summary Cards: Total Products, Total Weight, Total Sales
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _buildStatCard("Total Products", "${purchases.length}",
                     Icons.store, Colors.green),
-                _buildStatCard("Total Sales", "₹${_calculateTotalSales()}",
-                    Icons.attach_money, Colors.teal),
-                _buildStatCard("Avg. Margin", "18%",
-                    Icons.trending_up, Colors.orange),
+                _buildStatCard("Total Weight", "${_calculateTotalWeight().toStringAsFixed(1)} kg",
+                    Icons.scale, Colors.teal),
+                _buildStatCard("Total Sales", "₹${_calculateTotalSales().toStringAsFixed(2)}",
+                    Icons.attach_money, Colors.orange),
               ],
             ),
             const SizedBox(height: 24),
 
-            // Add Purchase Section
+            // Add Purchase Section (Weight kg, Price per kg)
             Card(
               elevation: 3,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -192,15 +228,15 @@ class _RetailerDashboardScreenState extends State<RetailerDashboardScreen> {
                     ),
                     const SizedBox(height: 10),
                     TextField(
-                      controller: _quantityController,
-                      decoration: _inputDecoration("Quantity"),
-                      keyboardType: TextInputType.number,
+                      controller: _weightController,
+                      decoration: _inputDecoration("Weight (kg)"),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     ),
                     const SizedBox(height: 10),
                     TextField(
-                      controller: _priceController,
-                      decoration: _inputDecoration("Price (₹)"),
-                      keyboardType: TextInputType.number,
+                      controller: _pricePerKgController,
+                      decoration: _inputDecoration("Price per kg (₹)"),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton.icon(
@@ -222,7 +258,7 @@ class _RetailerDashboardScreenState extends State<RetailerDashboardScreen> {
             ),
             const SizedBox(height: 24),
 
-            // ✅ Dynamic Pie Chart
+            // Dynamic Pie Chart: Revenue Distribution
             _buildChartCard(
               "Revenue Distribution",
               PieChart(
@@ -260,15 +296,22 @@ class _RetailerDashboardScreenState extends State<RetailerDashboardScreen> {
                             WidgetStateProperty.all(Colors.green.withOpacity(0.1)),
                         columns: const [
                           DataColumn(label: Text("Product")),
-                          DataColumn(label: Text("Quantity")),
-                          DataColumn(label: Text("Price (₹)")),
+                          DataColumn(label: Text("Weight (kg)")),
+                          DataColumn(label: Text("Price/ kg (₹)")),
+                          DataColumn(label: Text("Total (₹)")),
                         ],
                         rows: purchases
-                            .map((item) => DataRow(cells: [
-                                  DataCell(Text(item["product"])),
-                                  DataCell(Text(item["quantity"].toString())),
-                                  DataCell(Text(item["price"].toString())),
-                                ]))
+                            .map((item) {
+                              final weight = (item['weight'] as num).toDouble();
+                              final pricePerKg = (item['pricePerKg'] as num).toDouble();
+                              final total = weight * pricePerKg;
+                              return DataRow(cells: [
+                                DataCell(Text(item["product"])),
+                                DataCell(Text(weight.toStringAsFixed(2))),
+                                DataCell(Text(pricePerKg.toStringAsFixed(2))),
+                                DataCell(Text(total.toStringAsFixed(2))),
+                              ]);
+                            })
                             .toList(),
                       ),
                     ),
