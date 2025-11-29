@@ -44,7 +44,7 @@ class AgroChainApp extends StatelessWidget {
 
         '/retailerDashboard': (context) => const RetailerDashboardScreen(),
 
-        '/consumerDashboard': (context) => const ConsumerDashboardScreen(),
+       '/consumerDashboard': (context) => ConsumerTraceScreen(),
       },
     );
   }

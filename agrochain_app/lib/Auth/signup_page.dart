@@ -223,9 +223,11 @@ class _AgroSignupScreenState extends State<AgroSignupScreen> {
   Future<void> _handleSignup(String role) async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Normalize role
+    final String roleLower = role.trim().toLowerCase();
+
     setState(() => _isLoading = true);
     try {
-      // ✅ Create account
       final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _controllers['email']!.text.trim(),
         password: _controllers['password']!.text.trim(),
@@ -234,29 +236,28 @@ class _AgroSignupScreenState extends State<AgroSignupScreen> {
       final user = credential.user;
       if (user == null) throw Exception('User creation failed');
 
-      // ✅ Save extra data to Firestore
       final data = {
         'uid': user.uid,
         'name': _controllers['name']!.text.trim(),
         'email': _controllers['email']!.text.trim(),
         'mobile': _controllers['mobile']!.text.trim(),
-        'role': role,
+        'role': roleLower,
         'createdAt': FieldValue.serverTimestamp(),
       };
 
-      if (role.toLowerCase() == 'farmer') {
+      if (roleLower == 'farmer') {
         data.addAll({
           'village': _controllers['village']!.text.trim(),
           'state': _controllers['state']!.text.trim(),
           'district': _controllers['district']!.text.trim(),
           'farmArea': _controllers['farmArea']!.text.trim(),
         });
-      } else if (role.toLowerCase() == 'distributor') {
+      } else if (roleLower == 'distributor') {
         data.addAll({
           'warehouseLocation': _controllers['warehouseLocation']!.text.trim(),
           'state': _controllers['state']!.text.trim(),
         });
-      } else if (role.toLowerCase() == 'retailer') {
+      } else if (roleLower == 'retailer') {
         data.addAll({
           'shopName': _controllers['shopName']!.text.trim(),
           'shopAddress': _controllers['shopAddress']!.text.trim(),
@@ -270,8 +271,7 @@ class _AgroSignupScreenState extends State<AgroSignupScreen> {
         const SnackBar(content: Text('Signup successful!')),
       );
 
-      // ✅ Redirect to dashboard
-      switch (role.toLowerCase()) {
+      switch (roleLower) {
         case 'farmer':
           Navigator.pushReplacementNamed(context, '/farmerDashboard');
           break;
@@ -284,24 +284,10 @@ class _AgroSignupScreenState extends State<AgroSignupScreen> {
         default:
           Navigator.pushReplacementNamed(context, '/login');
       }
-    } on FirebaseAuthException catch (e) {
-      String msg;
-      switch (e.code) {
-        case 'email-already-in-use':
-          msg = 'This email is already registered.';
-          break;
-        case 'invalid-email':
-          msg = 'Invalid email format.';
-          break;
-        case 'weak-password':
-          msg = 'Password should be at least 6 characters.';
-          break;
-        default:
-          msg = 'Signup failed: ${e.message}';
-      }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
     } finally {
       setState(() => _isLoading = false);
     }
@@ -362,8 +348,10 @@ class _AgroSignupScreenState extends State<AgroSignupScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text('Signup as ${role[0].toUpperCase()}${role.substring(1)}',
-            style: const TextStyle(color: Colors.black87)),
+        title: Text(
+          'Signup as ${role[0].toUpperCase()}${role.substring(1)}',
+          style: const TextStyle(color: Colors.black87),
+        ),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -372,7 +360,7 @@ class _AgroSignupScreenState extends State<AgroSignupScreen> {
           elevation: 3,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(20),   // ✅ FIXED
             child: Form(
               key: _formKey,
               child: Column(
